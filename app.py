@@ -19,7 +19,6 @@ def get_data():
 def get_anomalies(df, contamination):
     return detect_comment_anomalies(df, contamination)
 
-
 @st.cache_data
 def get_clusters(df, k):
     return cluster_comments(df, k)
