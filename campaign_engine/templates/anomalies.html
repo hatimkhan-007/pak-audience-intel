@@ -1,0 +1,22 @@
+{% extends 'base.html' %}{% from '_macros.html' import chart %}
+{% block title %}Unusual marketing patterns{% endblock %}
+{% block body %}
+<div class="pagehead"><div><h1>3 · Which marketing patterns are unusual?</h1>
+<p>Each post is compared with comparable posts (same brand, platform and format). Robust z-scores on engagement, comment and complaint patterns feed an Isolation Forest; posts that deviate strongly are flagged for investigation.</p></div>
+<a class="btn noprint" href="{{ fq('export', name='anomalies') }}">Export CSV</a></div>
+<div class="qbox small"><strong>Flagged ≠ wrong.</strong> A flagged post may be a hit to replicate or a problem to fix. Use the reason column as a starting point for a manual look.</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+  <a class="chip {{ 'on' if not typ }}" href="{{ fq('anomalies') }}">All ({{ counts.values()|sum }})</a>
+  {% for t,n in counts.items() %}<a class="chip {{ 'on' if typ==t }}" href="{{ fq('anomalies', type=t) }}"><span style="color:{{ colors.get(t) }}">●</span> {{ t }} ({{ n }})</a>{% endfor %}
+</div>
+{% if not counts %}<div class="card empty">No unusual posts in this selection.</div>{% else %}
+<div class="card"><h2>Engagement vs comment rate <span class="muted small">click a coloured point to open the post</span></h2>{{ chart('an_sc', sc, 'tall') }}</div>
+<div class="card" style="margin-top:16px"><h2>Flagged posts <span class="muted small">{{ total }} shown</span></h2>
+<div class="tablewrap"><table><thead><tr><th>Post</th><th>Type</th><th>Where</th><th class="num">Eng. %</th><th class="num">Score</th><th>Why flagged</th></tr></thead><tbody>
+{% for a in rows %}<tr><td class="nowrap"><a href="{{ url_for('post_detail', post_id=a.post_id) }}">{{ a.post_id }}</a></td>
+<td><span class="badge" style="background:{{ colors.get(a.anomaly_type,'#888') }}22;color:{{ colors.get(a.anomaly_type,'#888') }}">{{ a.anomaly_type }}</span></td>
+<td class="small">{{ a.brand }}<br><span class="muted">{{ a.platform }} · {{ a.content_type }} · {{ a.campaign }}</span></td>
+<td class="num">{{ '%.2f'|format(a.engagement_rate) }}</td><td class="num">{{ '%.2f'|format(a.anomaly_score) }}</td><td class="small">{{ a.reason }}</td></tr>{% endfor %}</tbody></table></div>
+{% from '_macros.html' import pager %}{{ pager(pg, pages, 'anomalies') }}</div>
+{% endif %}
+{% endblock %}
