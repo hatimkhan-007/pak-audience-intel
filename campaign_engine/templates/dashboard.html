@@ -1,0 +1,29 @@
+{% extends 'base.html' %}{% from '_macros.html' import chart, kpi, prio, txt, icon %}
+{% block title %}Dashboard{% endblock %}
+{% block body %}
+<div class="pagehead"><div><h1>Audience & campaign overview</h1>
+<p>Women's lawn-suit campaigns on Instagram, TikTok and Facebook: what grabs attention, what shoppers ask for, what looks unusual and what to do next.</p></div>
+<a class="btn noprint" href="{{ fq('export', name='posts') }}">{{ icon('dl') }} Export posts</a></div>
+{% if kpis.posts == 0 %}<div class="card empty">No posts match these filters. <a href="{{ url_for('dashboard') }}">Reset filters</a></div>{% else %}
+<div class="grid g4" style="margin-bottom:16px">
+  {{ kpi('Posts analysed', kpis.posts|num, kpis.interactions|compact ~ ' total interactions') }}
+  {{ kpi('Comments classified', kpis.comments|num, 'Top need: ' ~ kpis.top_topic) }}
+  {{ kpi('Median engagement rate', (kpis.er ~ '%') if kpis.er is not none else '—', 'interactions ÷ followers, posts ≥3 days old') }}
+  {{ kpi('Unusual posts flagged', kpis.anomalies|num, 'vs comparable posts · ' ~ kpis.neg ~ '% negative comments') }}
+</div>
+<div class="grid g2">
+  <div class="card"><h2>Q1 · Which content attracts attention? <a class="small" href="{{ fq('content') }}">Details →</a></h2>{{ chart('c_content', charts.content) }}</div>
+  <div class="card"><h2>Q2 · What does the audience want? <a class="small" href="{{ fq('audience') }}">Details →</a></h2>{{ chart('c_topics', charts.topics) }}</div>
+  <div class="card"><h2>Q4 · Audience segments <a class="small" href="{{ fq('segments') }}">Details →</a></h2>{{ chart('c_segments', charts.segments) }}</div>
+  <div class="card"><h2>Comment sentiment</h2>{{ chart('c_sent', charts.sentiment) }}</div>
+</div>
+<div class="grid g2" style="margin-top:16px">
+  <div class="card"><h2>Q3 · Most unusual posts <a class="small" href="{{ fq('anomalies') }}">All →</a></h2>
+    {% if top_an %}<div class="tablewrap"><table><thead><tr><th>Post</th><th>Type</th><th>Why flagged</th></tr></thead><tbody>
+    {% for a in top_an %}<tr><td class="nowrap"><a href="{{ url_for('post_detail', post_id=a.post_id) }}">{{ a.post_id }}</a><div class="muted small">{{ a.brand }} · {{ a.platform }}</div></td><td><span class="badge b-topic">{{ a.anomaly_type }}</span></td><td class="small">{{ a.reason }}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<p class="muted">No unusual posts in this selection.</p>{% endif %}</div>
+  <div class="card"><h2>Q5 · Top priorities <a class="small" href="{{ url_for('recommendations') }}">All →</a></h2>
+    <div class="reclist">{% for r in recs %}<div class="rec High card" style="box-shadow:none;padding:12px"><strong>{{ r.title }}</strong><div class="small muted">{{ r.area }}</div></div>{% endfor %}</div></div>
+</div>
+{% endif %}
+{% endblock %}
