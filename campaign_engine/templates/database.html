@@ -1,0 +1,56 @@
+{% extends 'base.html' %}{% from '_macros.html' import icon %}
+{% block title %}Database & SQL{% endblock %}
+{% block body %}
+<div class="pagehead"><div><h1>Database design & SQL</h1>
+<p>All data shown in this app lives in a normalised SQLite database ({{ tables|length }} tables, {{ views|length }} views). The front end only <em>reads</em> it. Below: the entity-relationship diagram, how it reached 3NF, and a live read-only SQL console.</p></div></div>
+
+<div class="card er"><h2>Entity-relationship diagram <span class="muted small">arrows = foreign keys · <span class="tag-pk">PK</span> primary key · <span class="tag-fk">FK</span> foreign key</span></h2>
+{% set W=200 %}{% set pos = {} %}
+<svg viewBox="0 0 1160 560" role="img" aria-label="Entity relationship diagram">
+ <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor" style="color:var(--muted)"/></marker></defs>
+ {% for t in tables %}{% set xy = layout[t.name] %}{% set _ = pos.update({t.name:(xy[0], xy[1], 24+14*t.cols|length+6)}) %}{% endfor %}
+ {% for a,b in edges %}{% set pa=pos[a] %}{% set pb=pos[b] %}
+  <line x1="{{ pa[0]+100 }}" y1="{{ pa[1]+pa[2]/2 }}" x2="{{ pb[0]+100 }}" y2="{{ pb[1]+pb[2]/2 }}" marker-end="url(#ar)"/>{% endfor %}
+ {% for t in tables %}{% set p=pos[t.name] %}
+  <g transform="translate({{ p[0] }},{{ p[1] }})"><rect class="t" width="{{ W }}" height="{{ p[2] }}" rx="6"/><path class="h" d="M0 6a6 6 0 016-6h188a6 6 0 016 6v18H0z"/>
+   <text class="hd" x="10" y="16">{{ t.name }}</text>
+   {% for c in t.cols %}<text x="10" y="{{ 38+14*loop.index0 }}">{% if c.pk %}<tspan class="tag-pk">PK </tspan>{% elif c.fk %}<tspan class="tag-fk">FK </tspan>{% else %}<tspan>   </tspan>{% endif %}{{ c.name }}</text>{% endfor %}</g>
+ {% endfor %}
+</svg></div>
+
+<div class="card" style="margin-top:16px"><h2>How the design reaches 3NF</h2>
+<div class="steps">
+ <div><div><strong>Unnormalised.</strong> One wide sheet per post: <code>post_id, brand, platform, followers, campaign, content_type, likes, …, comment_texts = "Price please?; Delivery kitne din?", comment_topics = "Price inquiry; Delivery inquiry", source_name, provenance, collected_on</code>. Several comments are crammed into one cell, so the data is hard to query or count.</div></div>
+ <div><div><strong>1NF – atomic values, no repeating groups.</strong> The comment list moves to its own <code>comment</code> table: one row per comment (<code>comment_id</code> PK, <code>post_id</code> FK). Every column now holds a single value.</div></div>
+ <div><div><strong>2NF – no partial dependencies.</strong> If comment rows carried the post's brand, platform or likes, those would depend only on <code>post_id</code>, not on the whole key. They stay in <code>post</code>; <code>comment</code> keeps only what describes the comment.</div></div>
+ <div><div><strong>3NF – no transitive dependencies.</strong>
+   <ul style="margin:.3rem 0 0;padding-left:18px">
+     <li><code>followers</code> depends on (brand, platform), not on the post → new table <code>account</code>.</li>
+     <li>Names such as campaign, content type, category, language, sentiment, intent → lookup tables referenced by ID, so each value is stored once and typos cannot creep in.</li>
+     <li><code>provenance</code>, <code>source_url</code>, <code>collected_on</code> depend on the source, not the post → <code>data_source</code> (keeps real and simulated data separate).</li>
+     <li><code>theme</code> depends on the topic → stored in <code>topic</code>.</li>
+     <li>Engagement rate, totals and peer groups are <em>derived</em>, so they are computed in queries and never stored.</li></ul></div></div>
+</div></div>
+
+<div class="card" style="margin-top:16px"><h2>SQL console <span class="muted small">read-only · SELECT only · 500 rows max</span></h2>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">{% for t,q in examples %}<button class="chip ex" type="button" data-q="{{ q }}">{{ t }}</button>{% endfor %}</div>
+<textarea id="sql" class="sqlbox" spellcheck="false" aria-label="SQL query">{{ examples[0][1] }}</textarea>
+<div style="display:flex;gap:10px;align-items:center;margin:10px 0"><button class="btn primary" id="run">Run query</button><span class="muted small">Ctrl/⌘ + Enter · tip: try the views <code>v_post_flat</code> and <code>v_comment_flat</code></span></div>
+<div id="res"></div></div>
+
+<h2 style="margin:22px 0 10px">Tables</h2>
+{% for t in tables %}<details><summary>{{ t.name }} <span class="muted small">· {{ t.rows|num }} rows</span></summary>
+<div class="tablewrap" style="margin-top:8px"><table><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Not null</th><th>References</th></tr></thead><tbody>
+{% for c in t.cols %}<tr><td><code>{{ c.name }}</code></td><td>{{ c.type }}</td><td>{% if c.pk %}<span class="tag-pk">PK</span>{% endif %}{% if c.fk %}<span class="tag-fk">FK</span>{% endif %}</td><td>{{ '✓' if c.nn or c.pk }}</td><td class="small">{{ c.fk or '' }}</td></tr>{% endfor %}</tbody></table></div></details>{% endfor %}
+{% endblock %}
+{% block scripts %}<script>
+const sql=document.getElementById('sql'),res=document.getElementById('res'),run=document.getElementById('run');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function exec(){ run.disabled=true; res.innerHTML='<span class="spin"></span> Running…';
+ try{const r=await fetch('/api/sql',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql:sql.value})});const d=await r.json();
+  if(!r.ok){res.innerHTML=`<p style="color:var(--bad)">${esc(d.error)}</p>`;return}
+  res.innerHTML=`<p class="muted small">${d.rows.length} row${d.rows.length==1?'':'s'}${d.truncated?' (truncated)':''}</p><div class="tablewrap" style="max-height:420px"><table><thead><tr>${d.columns.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${d.rows.map(r=>`<tr>${r.map(v=>`<td>${v===null?'<span class=muted>NULL</span>':esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+ }catch(e){res.innerHTML='<p style="color:var(--bad)">Could not reach the server.</p>'}finally{run.disabled=false}}
+run.addEventListener('click',exec); sql.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))exec()});
+document.querySelectorAll('.ex').forEach(b=>b.addEventListener('click',()=>{sql.value=b.dataset.q;exec()}));
+</script>{% endblock %}
