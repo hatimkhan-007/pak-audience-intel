@@ -1,0 +1,66 @@
+{% from '_macros.html' import icon %}
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Audience & Campaign Intelligence{% endblock %} · Lahore Lawn Campaign Engine</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="logo"><div class="mark">ع</div><div>Campaign Intelligence<small>Pakistan social audience engine</small></div></div>
+    {% macro item(ep, label, ic, key, keep=True) %}
+      <a href="{{ fq(ep) if keep else url_for(ep) }}" class="{{ 'active' if page==key }}" {% if page==key %}aria-current="page"{% endif %}>{{ icon(ic) }}<span>{{ label }}</span></a>
+    {% endmacro %}
+    <nav class="nav">
+      {{ item('dashboard','Dashboard','home','dashboard') }}
+      <div class="nav-label">Five marketing questions</div>
+      {{ item('content','1 · What attracts attention?','content','content') }}
+      {{ item('audience','2 · What does the audience want?','audience','audience') }}
+      {{ item('anomalies','3 · What is unusual?','alert','anomalies') }}
+      {{ item('segments','4 · Which needs to address?','segments','segments') }}
+      {{ item('recommendations','5 · What should we do next?','bulb','recommendations', False) }}
+      <div class="nav-label">Data</div>
+      {{ item('posts_list','Posts (Table A)','posts','posts') }}
+      {{ item('comments_list','Comments (Table B)','comments','comments') }}
+      {{ item('youtube','YouTube sentiment (real)','audience','youtube', False) }}
+      {{ item('database_page','Database & SQL','db','database', False) }}
+      {{ item('analyze_page','Try the classifier','try','analyze', False) }}
+      {{ item('about','Method & data','info','about', False) }}
+    </nav>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn sm menu-btn" id="menuBtn" aria-label="Open menu">{{ icon('menu') }}</button>
+        {% for s in sources %}<span class="badge-src{{ ' real' if s.provenance=='observed' }}" title="{{ 'Generated for demonstration - not real measurements' if s.provenance=='simulated' else 'Collected from public posts' }}">{{ s.n|num }} {{ s.provenance }} post{{ '' if s.n==1 else 's' }}</span>{% endfor %}
+      </div>
+      <button class="btn sm" id="themeBtn" aria-label="Toggle light / dark theme">{{ icon('sun') }} Theme</button>
+    </header>
+    <main class="content" id="main">
+      {% if page in ['dashboard','content','audience','anomalies','segments','posts','comments'] %}
+      <form class="filterbar" method="get" data-auto aria-label="Filters">
+        {% for k,label in [('platform','Platform'),('brand','Brand'),('campaign','Campaign')] %}
+        <div><label for="f_{{k}}">{{ label }}</label>
+          <select id="f_{{k}}" name="{{k}}"><option value="">All</option>
+            {% for o in filter_opts[k] %}<option {{ 'selected' if filters.get(k)==o }}>{{ o }}</option>{% endfor %}
+          </select></div>
+        {% endfor %}
+        {% for k in ['type','q','content_type','sort','dir','anomalies','topic','language_type','sentiment','purchase_intent','segment'] %}{% if request.args.get(k) %}<input type="hidden" name="{{k}}" value="{{ request.args.get(k) }}">{% endif %}{% endfor %}
+        <noscript><button class="btn">Apply</button></noscript>
+        {% if filters %}<a class="btn sm" href="{{ request.path }}">Reset filters</a>{% endif %}
+      </form>
+      {% endif %}
+      {% block body %}{% endblock %}
+    </main>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="{{ url_for('static', filename='vendor/chart.umd.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
