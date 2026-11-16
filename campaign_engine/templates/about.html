@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Method & data{% endblock %}
+{% block body %}
+<div class="pagehead"><div><h1>Method, data and limitations</h1><p>How the numbers on every page were produced, and what they can and cannot tell you.</p></div></div>
+<div class="grid g2">
+<div class="card"><h2>Data provenance</h2>
+<div class="tablewrap"><table><thead><tr><th>Source</th><th>Type</th><th class="num">Posts</th><th>Collected</th></tr></thead><tbody>
+{% for s in src %}<tr><td>{{ s.source_name }}<div class="muted small">{{ s.reuse_permission }}</div></td><td><span class="badge {{ 'b-medium' if s.provenance=='simulated' else 'b-pos' }}">{{ s.provenance }}</span></td><td class="num">{{ s.posts|num }}</td><td>{{ s.collected_on }}</td></tr>{% endfor %}</tbody></table></div>
+<p class="small" style="margin-top:10px"><strong>The lawn-suit dataset is simulated; the YouTube comments are real.</strong> In the simulated data, brand names are fictional and none of the figures are real measurements. The real YouTube comments (Project 2 export) are stored as <code>observed</code> and kept out of the lawn-suit analysis because they come from a non-fashion video; see the <a href="/youtube">YouTube page</a>. It exists so the full engine can be demonstrated; it was designed with realistic patterns (e.g. one brand with delivery problems, one with discount hunters) so the analysis has structure to discover. Real public data can be loaded with <code>python manage.py import</code> and is stored with <code>provenance = observed</code>, so real and simulated records are never mixed up. Always respect each platform's terms and only use data you are permitted to collect.</p></div>
+<div class="card"><h2>Pipeline</h2><ol style="padding-left:18px;margin:0">
+<li><strong>Load</strong> posts (Table A) and comments (Table B) into the normalised database.</li>
+<li><strong>Understand each comment:</strong> language (English / Roman Urdu / Urdu), topic, sentiment and purchase intent with transparent keyword rules built for code-mixed text. Agreement with the generator's hidden labels on the simulated data: <strong>{{ '%.1f'|format((meta.get('topic_accuracy_vs_simulated_labels','0')|float)*100) }}%</strong>.</li>
+<li><strong>Cluster comments:</strong> words from all three languages are mapped to shared concepts (e.g. “قیمت”, “price”, “kitne ka”), vectorised with TF-IDF, reduced with SVD and grouped by K-Means. k = {{ meta.get('k') }} was chosen by silhouette score. Each cluster is named by its dominant topic.</li>
+<li><strong>Find unusual posts:</strong> robust z-scores against comparable posts (brand + platform + format) on engagement, comment rate, shares and complaint share, then an Isolation Forest to combine them.</li>
+<li><strong>Recommend:</strong> rule-based, each rule quotes the numbers that triggered it.</li></ol></div>
+</div>
+<div class="card" style="margin-top:16px"><h2>Limitations to keep in mind</h2><ul style="margin:0;padding-left:18px">
+<li>Engagement rate uses followers as the denominator; views are only available for some formats and platforms.</li>
+<li>Only a sample of each post's comments is stored (3-25), so per-post comment shares are noisy; the engine requires at least 3 matching comments before treating a pattern as meaningful.</li>
+<li>Rule-based topic detection will miss sarcasm and new slang. Segment names come from the dominant topic and each card shows how pure that cluster is.</li>
+<li>Anomalies are statistical, not verdicts. Investigate before acting.</li>
+<li>Segments describe correlation in text; test recommendations with A/B experiments before committing budget.</li></ul></div>
+<div class="card" style="margin-top:16px"><h2>Suggested real data sources</h2><ul style="margin:0;padding-left:18px">
+<li>Public posts from Pakistani lawn brands, collected only through permitted methods and each platform's terms.</li>
+<li>The 2026 study on Pakistani fashion-brand sentiment (10,602 observations, 17 brands) — check its availability and reuse terms first.</li>
+<li>Open Data Pakistan e-commerce orders (transaction context, not comments) and the Pakistani fashion catalogue on Hugging Face (75 product records with PKR prices).</li></ul></div>
+{% endblock %}
