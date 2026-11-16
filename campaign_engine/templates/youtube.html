@@ -1,0 +1,27 @@
+{% extends 'base.html' %}{% from '_macros.html' import chart, kpi, sent, txt %}
+{% block title %}YouTube sentiment{% endblock %}
+{% block body %}
+<div class="pagehead"><div><h1>YouTube comment sentiment <span class="badge" style="background:#dff5e9;color:#18704a;vertical-align:middle">real data</span></h1>
+<p>Comments collected by your YouTube Comment Sentiment Analyzer (Project 2), stored in the same database as <code>post</code> / <code>comment</code> rows with the analyzer's own sentiment label, score and confidence.</p></div>
+<a class="btn noprint" href="{{ url_for('comments_list', platform='YouTube') }}">Browse all comments →</a></div>
+{% if empty %}<div class="card empty">No YouTube comments in the database yet. Run <code>python manage.py import-youtube</code>.</div>{% else %}
+<div class="qbox small"><strong>Why this is shown separately.</strong> This is one video (a razor-brand advertisement), not lawn-suit content, so it is kept <em>out</em> of the audience segments, anomaly detection and recommendations (flag <code>data_source.include_in_analysis = 0</code>). Everything else (explorers, SQL console, exports) includes it.</div>
+<div class="grid g4" style="margin-bottom:16px">
+  {{ kpi('Comments stored', kp.n|num, kp.people|num ~ ' distinct commenters') }}
+  {{ kpi('Negative', kp.neg|pct, 'positive ' ~ (kp.pos|pct) ~ ' · neutral ' ~ (kp.neu|pct)) }}
+  {{ kpi('Average sentiment score', kp.score, 'scale −1 to +1 · mean confidence ' ~ kp.conf) }}
+  {{ kpi('Likes on comments', kp.likes|compact, kp.first ~ ' → ' ~ kp.last) }}
+</div>
+<div class="grid g2">
+  <div class="card"><h2>Sentiment distribution</h2>{{ chart('y_dist', charts.dist) }}</div>
+  <div class="card"><h2>Comments by year and sentiment</h2>{{ chart('y_year', charts.year) }}</div>
+  <div class="card"><h2>Sentiment score distribution</h2>{{ chart('y_hist', charts.hist) }}</div>
+  <div class="card"><h2>Average likes per comment</h2>{{ chart('y_likes', charts.likes) }}</div>
+</div>
+<div class="card" style="margin-top:16px"><h2>Most-used words by sentiment <span class="muted small">common filler words removed</span></h2>
+<div class="grid g3">{% for s in order %}<div><h3>{{ sent(s) }}</h3><div class="tablewrap"><table><tbody>
+{% for w,n in words[s].items() %}<tr><td>{{ w }}</td><td class="num">{{ n|num }}</td></tr>{% endfor %}</tbody></table></div></div>{% endfor %}</div></div>
+<div class="card" style="margin-top:16px"><h2>Most-liked comments</h2><div class="tablewrap"><table><thead><tr><th>Comment</th><th>Sentiment</th><th class="num">Likes</th><th class="num">Replies</th></tr></thead><tbody>
+{% for c in top %}<tr><td>{{ txt(c.comment_text[:300]) }}{{ '…' if c.comment_text|length > 300 }}<div class="muted small">{{ c.commenter }} · {{ c.published_at[:10] }}</div></td><td>{{ sent(c.sentiment) }}</td><td class="num">{{ c.like_count|num }}</td><td class="num">{{ c.reply_count|num }}</td></tr>{% endfor %}</tbody></table></div></div>
+{% endif %}
+{% endblock %}
