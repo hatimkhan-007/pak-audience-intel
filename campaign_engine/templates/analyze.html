@@ -1,0 +1,31 @@
+{% extends 'base.html' %}{% from '_macros.html' import sent %}
+{% block title %}Try the classifier{% endblock %}
+{% block body %}
+<div class="pagehead"><div><h1>Try the comment classifier</h1>
+<p>Paste any comment, in English, Roman Urdu or Urdu script. The engine detects the language, topic, sentiment and purchase intent, and shows which audience segment it falls into.</p></div></div>
+<div class="card"><label for="txt"><strong>Comment</strong></label>
+<textarea id="txt" rows="3" maxlength="500" placeholder="e.g. Price bohat zyada hai, koi discount milega?"></textarea>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
+<button class="btn primary" id="go">Analyse</button>
+<span class="muted small" style="align-self:center">Try:</span>
+{% for e in ['Price please?','Is this available in Karachi?','Ordered last week, still waiting.','Inbox me details send kar dein.','قیمت بہت زیادہ ہے','Delivery kitne din mein hogi?'] %}<button class="chip ex" type="button">{{ e }}</button>{% endfor %}</div>
+<div id="out" aria-live="polite"></div></div>
+{% endblock %}
+{% block scripts %}<script>
+const txt=document.getElementById('txt'),out=document.getElementById('out'),go=document.getElementById('go');
+const cls=s=>({Positive:'b-pos',Negative:'b-neg'}[s]||'b-neu');
+async function run(){
+  if(!txt.value.trim()){out.innerHTML='<p class="muted">Type a comment first.</p>';return}
+  go.disabled=true;out.innerHTML='<span class="spin"></span> Analysing…';
+  try{const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:txt.value})});const d=await r.json();
+    if(!r.ok){out.innerHTML=`<p style="color:var(--bad)">${d.error}</p>`;return}
+    const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    out.innerHTML=`<div class="result"><div><b>Language</b>${esc(d.language_type)}</div><div><b>Topic</b>${esc(d.topic)}</div>
+    <div><b>Sentiment</b><span class="badge ${cls(d.sentiment)}">${esc(d.sentiment)}</span> <span class="muted small">${d.sentiment_score}</span></div>
+    <div><b>Purchase intent</b>${esc(d.purchase_intent)}</div><div><b>Audience segment</b>${esc(d.segment||'—')}</div></div>
+    ${d.suggested_action?`<div class="qbox" style="margin-top:12px"><strong>Suggested action:</strong> ${esc(d.suggested_action)}</div>`:''}`;
+  }catch(e){out.innerHTML='<p style="color:var(--bad)">Could not reach the server.</p>'}finally{go.disabled=false}
+}
+go.addEventListener('click',run);txt.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))run()});
+document.querySelectorAll('.ex').forEach(b=>b.addEventListener('click',()=>{txt.value=b.textContent;run()}));
+</script>{% endblock %}
