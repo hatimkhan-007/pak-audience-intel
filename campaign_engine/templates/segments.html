@@ -1,0 +1,29 @@
+{% extends 'base.html' %}{% from '_macros.html' import chart, txt %}
+{% block title %}Audience segments{% endblock %}
+{% block body %}
+<div class="pagehead"><div><h1>4 · Which audience needs should the brand address?</h1>
+<p>Comments are converted into language-independent meaning tokens, vectorised (TF-IDF → SVD) and grouped with K-Means into <strong>{{ k }}</strong> clusters. Each cluster is named by its dominant need and paired with an action.</p></div></div>
+{% if total == 0 %}<div class="card empty">No comments match these filters.</div>{% else %}
+<div class="grid g21">
+  <div class="card"><h2>Cluster map <span class="muted small">each dot = one comment (t-SNE, sampled)</span></h2>{{ chart('s_map', scatter, 'tall') }}
+    <p class="muted small">Comments that ask for the same thing sit close together, even when written in different languages. Click a legend item to hide or show a segment.</p></div>
+  <div class="card"><h2>Why {{ k }} clusters?</h2>{{ chart('s_sil', silc, 'short') }}
+    <p class="muted small">Silhouette score measures how well-separated the clusters are (higher is better). The best-scoring k was used.</p></div>
+</div>
+<h2 style="margin:22px 0 10px">Segment playbook <span class="muted small">({{ cards|length }} segments · {{ total|num }} comments)</span></h2>
+<div class="grid g2">
+{% for c in cards %}
+<article class="card seg">
+  <div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><h3 style="font-size:1.1rem;margin:0">{{ c.segment_name }}</h3><span class="badge b-topic">{{ c.n|num }} · {{ c.share|pct }}</span></div>
+  <div class="bar" aria-hidden="true"><i style="width:{{ [c.share*250, 100]|min }}%"></i></div>
+  <p style="margin:0">{{ c.description }}</p>
+  <div class="meta-row"><span>Core need: <strong>{{ c.dominant }}</strong> ({{ c.purity|pct(0) }} of segment)</span><span>Negative: {{ c.neg|pct(0) }}</span>
+    {% for l,v in c.lang.items() %}<span>{{ l }} {{ v|pct(0) }}</span>{% endfor %}
+    {% for l,v in c.top_brand.items() %}<span>Most from {{ l }} ({{ v|pct(0) }})</span>{% endfor %}{% for l,v in c.top_platform.items() %}<span>{{ l }} ({{ v|pct(0) }})</span>{% endfor %}</div>
+  <div class="meta-row"><span>Key terms: <code>{{ c.top_terms }}</code></span></div>
+  <ul class="samples">{% for s in c.samples %}<li>“{{ txt(s) }}”</li>{% endfor %}</ul>
+  <div class="rec Medium" style="border-left:5px solid var(--accent);padding:8px 12px;background:var(--surface2);border-radius:10px"><strong>Recommended action:</strong> {{ c.suggested_action }}</div>
+  <a class="small" href="{{ fq('comments_list', segment=c.segment_name) }}">Browse this segment's comments →</a>
+</article>{% endfor %}
+</div>{% endif %}
+{% endblock %}
