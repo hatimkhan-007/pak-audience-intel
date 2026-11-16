@@ -1,0 +1,26 @@
+{% extends 'base.html' %}{% from '_macros.html' import prio, icon %}
+{% block title %}What should the team do next?{% endblock %}
+{% block body %}
+<div class="pagehead"><div><h1>5 · What should the marketing team do next?</h1>
+<p>Every recommendation is generated from the data and quotes its evidence. Priorities reflect how large the pattern is (share of comments, size of the gap, number of posts affected).</p></div>
+<div class="noprint" style="display:flex;gap:8px"><button class="btn" data-print>Print</button><a class="btn" href="{{ url_for('export', name='recommendations') }}">{{ icon('dl') }} CSV</a></div></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px" class="noprint" id="areaChips">
+  <button class="chip on" data-area="">All ({{ recs|length }})</button>
+  {% for a in areas %}<button class="chip" data-area="{{ a }}">{{ a }} ({{ recs|selectattr('area','equalto',a)|list|length }})</button>{% endfor %}
+</div>
+<div class="reclist">
+{% for r in recs %}
+<article class="card rec {{ r.priority }}" data-area="{{ r.area }}">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">{{ prio(r.priority) }}<span class="badge b-topic">{{ r.area }}</span>{% if r.segment_name %}<a class="badge b-neu" href="{{ url_for('segments') }}">Segment: {{ r.segment_name }}</a>{% endif %}</div>
+  <h3 style="font-size:1.08rem;margin:2px 0">{{ r.title }}</h3>
+  <div class="ev"><strong>Evidence:</strong> {{ r.evidence }}</div>
+  <div class="act"><strong>Do this:</strong> {{ r.action }}</div>
+</article>{% endfor %}
+</div>
+<p class="muted small" style="margin-top:14px">Generated {{ meta.get('analysed_at','') }} UTC from the current database. Recommendations are decision support, not guarantees: validate with the A/B tests suggested above.</p>
+{% endblock %}
+{% block scripts %}<script>
+document.querySelectorAll('#areaChips .chip').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#areaChips .chip').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.rec[data-area]').forEach(c=>c.style.display=(!b.dataset.area||c.dataset.area===b.dataset.area)?'':'none');
+}));</script>{% endblock %}
