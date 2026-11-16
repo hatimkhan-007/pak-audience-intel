@@ -1,0 +1,24 @@
+{% extends 'base.html' %}{% from '_macros.html' import pager, icon %}
+{% block title %}Posts{% endblock %}
+{% block body %}
+<div class="pagehead"><div><h1>Posts <span class="muted" style="font-weight:400">· Table A</span></h1>
+<p>Every post record with its engagement metrics. Click a column to sort, or open a post to see its comments and how it compares with similar posts.</p></div>
+<a class="btn noprint" href="{{ fq('export', name='posts') }}">{{ icon('dl') }} Export CSV</a></div>
+<form class="filterbar" method="get" style="margin-top:-6px">
+  {% for k,v in filters.items() %}<input type="hidden" name="{{k}}" value="{{v}}">{% endfor %}
+  <div><label for="q">Search post ID</label><input id="q" type="search" name="q" value="{{ q }}" placeholder="e.g. P0042"></div>
+  <div><label for="ct">Content type</label><select id="ct" name="content_type"><option value="">All</option>{% for c in all_ct %}<option {{ 'selected' if c==ct }}>{{ c }}</option>{% endfor %}</select></div>
+  <label style="display:flex;gap:6px;align-items:center;margin:0 6px 8px"><input type="checkbox" name="anomalies" value="1" {{ 'checked' if only_an }}> Unusual only</label>
+  <button class="btn primary">Apply</button>
+</form>
+<p class="muted small">{{ total|num }} posts</p>
+<div class="tablewrap"><table><thead><tr>
+{% macro th(col,label,cls='') %}<th class="{{cls}}"><a href="{{ url_for('posts_list', **qs_without('page','sort','dir', sort=col, dir=('asc' if (sort==col and not asc) else 'desc'))) }}">{{ label }}{% if sort==col %} {{ '▲' if asc else '▼' }}{% endif %}</a></th>{% endmacro %}
+{{ th('post_id','Post') }}{{ th('brand','Brand') }}{{ th('platform','Platform') }}{{ th('content_type','Format') }}{{ th('campaign','Campaign') }}
+{{ th('likes','Likes','num') }}{{ th('comments_count','Comments','num') }}{{ th('shares','Shares','num') }}{{ th('views','Views','num') }}{{ th('days_since_post','Age (d)','num') }}{{ th('engagement_rate','Eng. %','num') }}<th>Flag</th></tr></thead><tbody>
+{% for p in rows %}<tr><td><a href="{{ url_for('post_detail', post_id=p.post_id) }}">{{ p.post_id }}</a></td><td>{{ p.brand }}</td><td>{{ p.platform }}</td><td>{{ p.content_type }}</td><td>{{ p.campaign }}</td>
+<td class="num">{{ p.likes|num }}</td><td class="num">{{ p.comments_count|num }}</td><td class="num">{{ p.shares|num if p.shares==p.shares else '—' }}</td><td class="num">{{ p.views|num if p.views==p.views else '—' }}</td><td class="num">{{ p.days_since_post }}</td>
+<td class="num">{{ '%.2f'|format(p.engagement_rate) if p.engagement_rate==p.engagement_rate else '—' }}</td><td>{% if p.anomaly_type==p.anomaly_type and p.anomaly_type %}<span class="badge b-topic" title="{{ p.reason }}">{{ p.anomaly_type }}</span>{% endif %}</td></tr>
+{% else %}<tr><td colspan="12" class="empty">No posts match.</td></tr>{% endfor %}</tbody></table></div>
+{{ pager(pg, pages, 'posts_list') }}
+{% endblock %}
