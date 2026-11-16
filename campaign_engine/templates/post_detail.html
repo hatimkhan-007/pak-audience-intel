@@ -1,0 +1,16 @@
+{% extends 'base.html' %}{% from '_macros.html' import chart, sent, txt, kpi %}
+{% block title %}{{ p.post_id }}{% endblock %}
+{% block body %}
+<div class="pagehead"><div><p><a href="{{ url_for('posts_list') }}">← All posts</a></p><h1>{{ p.post_id }} · {{ p.brand }}</h1>
+<p>{{ p.platform }} · {{ p.content_type }} · {{ p.campaign }} · {{ p.product_category }} · posted {{ p.days_since_post }} day{{ '' if p.days_since_post==1 else 's' }} ago</p></div>
+<span class="badge-src">{{ p.provenance }} data · {{ p.source_name }}</span></div>
+{% if p.anomaly_type == p.anomaly_type and p.anomaly_type %}<div class="qbox"><strong>Flagged as: {{ p.anomaly_type }}.</strong> {{ p.reason }}</div>{% endif %}
+<div class="grid g4" style="margin-bottom:16px">
+ {{ kpi('Likes', p.likes|num, 'peer median ' ~ (peer.likes|num)) }}{{ kpi('Comments', p.comments_count|num, 'peer median ' ~ (peer.comments|num)) }}
+ {{ kpi('Shares', (p.shares|num) if p.shares==p.shares else 'n/a', 'peer median ' ~ (peer.shares|num)) }}{{ kpi('Engagement rate', ('%.2f%%'|format(p.engagement_rate)) if p.engagement_rate==p.engagement_rate else '—', ('peer median ' ~ peer.er ~ '% (n=' ~ peer.n ~ ')') if peer.er is not none else 'no comparable posts') }}
+</div>
+<p class="muted small">Peers = same brand, platform and format, ≥3 days old. Views: {{ p.views|num if p.views==p.views else 'not available' }} · Followers: {{ p.followers|num }}.</p>
+<div class="grid g2"><div class="card"><h2>What commenters ask about <span class="muted small">{{ n_comments|num }} stored comments</span></h2>{% if cm %}{{ chart('pd_topics', topic_chart, 'short') }}{% else %}<p class="muted">No comments stored for this post.</p>{% endif %}</div>
+<div class="card"><h2>Comments{% if n_comments > cm|length %} <span class="muted small">top {{ cm|length }} by likes</span>{% endif %}</h2><div class="tablewrap" style="max-height:340px"><table><thead><tr><th>Comment</th><th>Topic</th><th>Sentiment</th></tr></thead><tbody>
+{% for c in cm %}<tr><td>{{ txt(c.comment_text) }}</td><td><span class="badge b-topic">{{ c.topic }}</span></td><td>{{ sent(c.sentiment) }}</td></tr>{% endfor %}</tbody></table></div></div></div>
+{% endblock %}
