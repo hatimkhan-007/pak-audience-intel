@@ -1,0 +1,20 @@
+{% extends 'base.html' %}{% from '_macros.html' import pager, sent, txt, icon %}
+{% block title %}Comments{% endblock %}
+{% block body %}
+<div class="pagehead"><div><h1>Comments <span class="muted" style="font-weight:400">· Table B</span></h1>
+<p>Search and filter the classified comments. Language, topic, sentiment, purchase intent and audience segment are stored in the database for every comment.</p></div>
+<a class="btn noprint" href="{{ fq('export', name='comments') }}">{{ icon('dl') }} Export CSV</a></div>
+<form class="filterbar" method="get" style="margin-top:-6px">
+  {% for k,v in filters.items() %}<input type="hidden" name="{{k}}" value="{{v}}">{% endfor %}
+  <div style="flex:1 1 220px"><label for="q">Search text</label><input id="q" type="search" name="q" value="{{ q }}" placeholder="price, delivery, قیمت…" style="width:100%"></div>
+  {% for k,label in [('topic','Topic'),('language_type','Language'),('sentiment','Sentiment'),('purchase_intent','Intent'),('segment','Segment')] %}
+  <div><label for="c_{{k}}">{{ label }}</label><select id="c_{{k}}" name="{{k}}"><option value="">All</option>{% for o in opts[k] %}<option {{ 'selected' if sel[k]==o }}>{{ o }}</option>{% endfor %}</select></div>{% endfor %}
+  <button class="btn primary">Apply</button><a class="btn" href="{{ url_for('comments_list', **filters) }}">Clear</a>
+</form>
+<p class="muted small">{{ total|num }} comments</p>
+<div class="tablewrap"><table><thead><tr><th>Comment</th><th>Platform</th><th>Language</th><th>Topic</th><th>Sentiment</th><th class="num">Likes</th><th>Segment</th><th>Post</th></tr></thead><tbody>
+{% for c in rows %}<tr><td>{{ txt(c.comment_text, q) }}</td><td class="small">{{ c.platform }}</td><td class="small">{{ c.language_type }}</td><td><span class="badge b-topic">{{ c.topic }}</span></td><td>{{ sent(c.sentiment) }}</td><td class="num">{{ c.like_count|num }}</td><td class="small">{{ c.segment if c.segment==c.segment and c.segment else '—' }}</td>
+<td><a href="{{ url_for('post_detail', post_id=c.post_id) }}">{{ c.post_id }}</a></td></tr>
+{% else %}<tr><td colspan="8" class="empty">No comments match these filters.</td></tr>{% endfor %}</tbody></table></div>
+{{ pager(pg, pages, 'comments_list') }}
+{% endblock %}
