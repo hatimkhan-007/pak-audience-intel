@@ -1,0 +1,46 @@
+{% extends 'base.html' %}{% from '_macros.html' import chart %}
+{% block title %}Which content attracts attention?{% endblock %}
+{% block body %}
+<div class="pagehead"><div><h1>1 · Which content attracts attention?</h1>
+<p>Compares reels, product photos, influencer posts, styling videos, sale announcements and Eid campaigns. Switch the metric to see likes, comments, shares or views (where the platform makes them available).</p></div></div>
+{% if n == 0 %}<div class="card empty">No posts older than 3 days match these filters.</div>{% else %}
+<div class="qbox small"><strong>How to read this.</strong> <em>Engagement rate</em> = (likes + comments + shares) ÷ followers. The <em>platform-adjusted index</em> divides it by the platform's median, so 1.0 means "typical for that platform" — this keeps TikTok's naturally higher rates from hiding good Instagram or Facebook content. Based on {{ n|num }} posts older than 3 days (young posts haven't finished collecting engagement).</div>
+<div class="card" style="margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+  <label for="metric"><strong>Metric</strong></label>
+  <select id="metric">{% for m in ct.metrics %}<option {{ 'selected' if loop.index==2 }}>{{ m }}</option>{% endfor %}</select>
+  <span class="muted small">Median for rates, average for counts. Blank = metric not available for that format.</span>
+</div>
+<div class="grid g2">
+  <div class="card"><h2>By content type</h2><div class="chart-wrap"><canvas id="ch_ct"></canvas></div></div>
+  <div class="card"><h2>By campaign</h2><div class="chart-wrap"><canvas id="ch_camp"></canvas></div></div>
+  <div class="card"><h2>By platform</h2><div class="chart-wrap short"><canvas id="ch_plat"></canvas></div></div>
+  <div class="card"><h2>By brand</h2><div class="chart-wrap short"><canvas id="ch_brand"></canvas></div></div>
+</div>
+<div class="card" style="margin-top:16px"><h2>Content type × platform (median engagement rate %)</h2>
+  {{ chart('ch_grouped', grouped) }}
+  <div class="tablewrap" style="margin-top:12px"><table class="heat"><thead><tr><th>Content type</th>{% for c in heat_cols %}<th>{{ c }}</th>{% endfor %}</tr></thead><tbody>
+  {% for row in heat %}<tr><td style="text-align:left"><strong>{{ row.label }}</strong></td>
+    {% for c in row.cells %}<td style="background:rgba(11,154,147,{{ c.a }})" title="n = {{ c.n }} posts">{{ c.v if c.v is not none else '—' }}</td>{% endfor %}</tr>{% endfor %}
+  </tbody></table></div><p class="muted small">Darker = higher engagement. "—" means that format is not used on that platform.</p></div>
+<div class="grid g2" style="margin-top:16px">
+  <div class="card"><h2>Format summary</h2><div class="tablewrap"><table><thead><tr><th>Format</th><th class="num">Posts</th><th class="num">Eng. rate %</th><th class="num">Index</th><th class="num">Avg likes</th><th class="num">Avg comments</th><th class="num">Avg shares</th></tr></thead><tbody>
+  {% for s in stats %}<tr><td><strong>{{ s.content_type }}</strong></td><td class="num">{{ s.posts|num }}</td><td class="num">{{ '%.2f'|format(s.er) }}</td><td class="num">{{ '%.2f'|format(s.idx) }}</td><td class="num">{{ s.likes|num }}</td><td class="num">{{ s.comments|num }}</td><td class="num">{{ s.shares|num }}</td></tr>{% endfor %}</tbody></table></div></div>
+  <div class="card"><h2>Top 10 posts by engagement rate</h2><div class="tablewrap"><table><thead><tr><th>Post</th><th>Format</th><th class="num">Rate %</th></tr></thead><tbody>
+  {% for p in top_posts %}<tr><td><a href="{{ url_for('post_detail', post_id=p.post_id) }}">{{ p.post_id }}</a><div class="muted small">{{ p.brand }} · {{ p.platform }} · {{ p.campaign }}</div></td><td>{{ p.content_type }}</td><td class="num">{{ '%.2f'|format(p.engagement_rate) }}</td></tr>{% endfor %}</tbody></table></div></div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if n %}
+<script type="application/json" id="payload">{{ {'ch_ct':ct,'ch_camp':camp,'ch_plat':plat,'ch_brand':brand}|tojson }}</script>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  const P=JSON.parse(document.getElementById('payload').textContent), sel=document.getElementById('metric');
+  function draw(){ const m=sel.value;
+    Object.entries(P).forEach(([id,p])=>{
+      Charts.make(id,{type:'bar',data:{labels:p.labels,datasets:[{label:m,data:p.metrics[m]}]},
+        options:{indexAxis:id==='ch_plat'||id==='ch_brand'?'x':'y',colorByPoint:true,plugins:{legend:{display:false},tooltip:{callbacks:{afterLabel:c=>'Posts: '+p.n[c.dataIndex]}}}}});
+    });
+  }
+  sel.addEventListener('change',draw); draw();
+});
+</script>{% endif %}{% endblock %}
