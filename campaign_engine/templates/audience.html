@@ -1,0 +1,23 @@
+{% extends 'base.html' %}{% from '_macros.html' import chart, txt %}
+{% block title %}What does the audience want?{% endblock %}
+{% block body %}
+<div class="pagehead"><div><h1>2 · What does the audience want?</h1>
+<p>Every comment is grouped around price, fabric quality, sizing, delivery, discounts, availability and purchase interest, whether it is written in English, Roman Urdu or Urdu script.</p></div>
+<a class="btn noprint" href="{{ fq('comments_list') }}">Browse comments →</a></div>
+{% if total == 0 %}<div class="card empty">No comments match these filters.</div>{% else %}
+<div class="grid g2">
+  <div class="card"><h2>What people talk about <span class="muted small">{{ total|num }} comments</span></h2>{{ chart('a_topics', charts.topics, 'tall') }}</div>
+  <div class="card"><h2>Share of each topic by platform</h2>{{ chart('a_plat', charts.by_platform, 'tall') }}</div>
+  <div class="card"><h2>Sentiment within each topic</h2>{{ chart('a_sent', charts.sentiment, 'tall') }}</div>
+  <div class="grid g2" style="align-content:start">
+    <div class="card"><h2>Language</h2>{{ chart('a_lang', charts.language, 'short') }}</div>
+    <div class="card"><h2>Purchase intent</h2>{{ chart('a_int', charts.intent, 'short') }}</div>
+    <div class="card span2"><h2>Cities mentioned most</h2>{{ chart('a_city', charts.cities, 'short') }}</div>
+  </div>
+</div>
+<div class="card" style="margin-top:16px"><h2>Topic detail with real examples</h2>
+<div class="tablewrap"><table><thead><tr><th>Topic</th><th>Theme</th><th class="num">Comments</th><th class="num">Share</th><th class="num">Negative</th><th>Examples</th></tr></thead><tbody>
+{% for r in rows %}<tr><td><a href="{{ fq('comments_list', topic=r.topic) }}"><strong>{{ r.topic }}</strong></a></td><td class="muted">{{ r.theme }}</td><td class="num">{{ r.n|num }}</td><td class="num">{{ r.share|pct }}</td><td class="num">{{ r.neg|pct(0) }}</td>
+<td class="small">{% for e in r.ex %}<div>“{{ txt(e) }}”</div>{% endfor %}</td></tr>{% endfor %}</tbody></table></div></div>
+{% endif %}
+{% endblock %}
